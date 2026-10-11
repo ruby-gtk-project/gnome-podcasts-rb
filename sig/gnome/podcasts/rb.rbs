@@ -1,0 +1,10 @@
+module Gnome
+  module Podcasts
+    module Rb
+      module Version
+        VERSION: String
+      end
+      VERSION: String
+    end
+  end
+end
