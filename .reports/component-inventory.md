@@ -12,22 +12,44 @@ one `lib/*.rb`, so the rows below are unioned per port file.
 
 ## State of the port
 
-`lib/` on `ruby` contains exactly two files:
+`lib/` on `ruby` now holds 45 files: the data layer, the application, the main
+window and the three content pages, ported in commit `f0c12cc6`.
 
-- `lib/gnome_podcasts.rb` — requires the application
-- `lib/gnome_podcasts/application.rb` — a placeholder `Gtk::Application` whose
-  window holds one `Adwaita::StatusPage` reading "The Ruby port has not been
-  written yet."
-- `lib/gnome/podcasts/rb/version.rb` — packaging only
+Present (one `lib/*.rb` per upstream component, every file carrying the
+`Ported from podcasts-…` comment the house style asks for):
 
-**No user-facing component of upstream exists in the port yet.** Every row below
-is a gap. The application row is marked present only because the file exists; it
-carries none of upstream's actions, accelerators, menu or window.
+- **Application and window** — `gnome_podcasts/application.rb`, `main_window.rb`,
+  `main_menu.rb`, `about_dialog.rb`, `shortcuts_dialog.rb`
+- **Content** — `content_stack.rb`, `base_view.rb`, `home_view.rb`,
+  `home_episode_list.rb`, `shows_view.rb`, `queue_view.rb`, `show_widget.rb`,
+  `show_menu.rb`, `filter_menu.rb`
+- **Episodes** — `episode_widget.rb`, `episode_menu.rb`, `download_progress.rb`,
+  `read_more_label.rb`
+- **Empty states** — `empty_view.rb`, `empty_show.rb`
+- **Support** — `settings.rb`, `style.rb`, `icons.rb`, `opml_dialogs.rb`,
+  `download_manager.rb`, `utils.rb`, `xdg_dirs.rb`
+- **Data layer** — `database.rb`, `dbqueries.rb`, `show.rb`, `episode.rb`,
+  `source.rb`, `queue_item.rb`, `feed.rb`, `feed_manager.rb`, `opml.rb`,
+  `parser.rb`, `pipeline.rb`, `xml_parser.rb`, `data_utils.rb`, `errors.rb`
 
-Totals: 24 `.ui` trees (21 widget templates, 5 menu models, 1 standalone
-shortcuts dialog), 32 `podcasts-gtk/src` modules, 1 GSettings schema (8 keys +
-1 enum), 1 GResource manifest (24 `.ui` + 6 in-tree icons + `style.css`),
-45 translated locales in `podcasts-gtk/po/`.
+Three of the present files are **partial**, and each knows it:
+
+- `gnome_podcasts/application.rb` carries 11 of upstream's 25 accelerators and
+  none of the player, chapters or discovery actions. Upstream's `Action` channel
+  is replaced by direct method calls on this object.
+- `main_window.rb` has the toast overlay, navigation view, both view switchers,
+  the `toolbar` center box and the narrow breakpoint — but **not** the
+  `AdwMultiLayoutView`, its `wide`/`narrow` layouts, the four layout slots, the
+  `AdwBottomSheet` or the two player breakpoints, because all of those exist to
+  host the player.
+- `shortcuts_dialog.rb` lists 8 of upstream's 14 items: Navigation and General,
+  minus "Go To Discovery Page". The whole Player section is absent.
+
+Still entirely missing (every row below marked `no`): the **player** stack
+(10 files), the **discovery** pages (3 files), the **episode description** page,
+the **chapters** page and both parsers, **sync preferences** and the whole
+Nextcloud sync data layer, `download_covers`, `thumbnail_generator`, and the
+`po/` catalogue.
 
 ## Environment facts verified in the fork's dev shell
 
@@ -42,11 +64,11 @@ shortcuts dialog), 32 `podcasts-gtk/src` modules, 1 GSettings schema (8 keys +
 
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
-| `src/app.rs`, `src/widgets/aboutdialog.rs` (app half) | `lib/gnome_podcasts/application.rb` | application | placeholder only |
-| `src/window.rs` + `resources/gtk/window.ui` (template) | `lib/main_window.rb` | window | no |
-| `resources/gtk/window.ui` (`<menu id="menu">`) | `lib/main_menu.rb` | menu | no |
-| `src/widgets/aboutdialog.rs` | `lib/about_dialog.rb` | dialog | no |
-| `resources/gtk/shortcuts-dialog.ui` (no backing source) | `lib/shortcuts_dialog.rb` | dialog | no |
+| `src/app.rs`, `src/widgets/aboutdialog.rs` (app half) | `lib/gnome_podcasts/application.rb` | application | partial |
+| `src/window.rs` + `resources/gtk/window.ui` (template) | `lib/main_window.rb` | window | partial |
+| `resources/gtk/window.ui` (`<menu id="menu">`) | `lib/main_menu.rb` | menu | yes |
+| `src/widgets/aboutdialog.rs` | `lib/about_dialog.rb` | dialog | yes |
+| `resources/gtk/shortcuts-dialog.ui` (no backing source) | `lib/shortcuts_dialog.rb` | dialog | partial |
 
 ### `src/app.rs` — `PdApplication(Adw.Application)`
 
@@ -116,16 +138,16 @@ application, Import Subscriptions, Export Subscriptions, Search.
 
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
-| `src/widgets/content_stack.rs` | `lib/content_stack.rb` | view stack + empty-state switch | no |
-| `src/widgets/base_view.rs` | `lib/base_view.rb` | widget (scrolled `AdwBin` base) | no |
-| `src/widgets/home_view.rs` + `home_view.ui` | `lib/home_view.rb` | page | no |
-| `resources/gtk/home_episode_list.ui` | `lib/home_episode_list.rb` | list (date-bucketed) | no |
-| `src/widgets/shows_view.rs` | `lib/shows_view.rb` | page (`GridView` of covers) | no |
-| `src/widgets/queue_view.rs` + `queue_view.ui` | `lib/queue_view.rb` | page + empty state | no |
-| `src/widgets/show.rs` + `show_widget.ui` | `lib/show_widget.rb` | page | no |
-| `src/widgets/show_menu.rs` + `show_menu.ui` | `lib/show_menu.rb` | menu + action group | no |
-| `resources/gtk/secondary_menu.ui` | folded into `lib/show_menu.rb` | menu (dead: all three `action` attributes are commented out upstream) | no |
-| `src/widgets/filter_menu.rs` + `filter_menu.ui` | `lib/filter_menu.rb` | menu + stateful actions | no |
+| `src/widgets/content_stack.rs` | `lib/content_stack.rb` | view stack + empty-state switch | yes |
+| `src/widgets/base_view.rs` | `lib/base_view.rb` | widget (scrolled `AdwBin` base) | yes |
+| `src/widgets/home_view.rs` + `home_view.ui` | `lib/home_view.rb` | page | yes |
+| `resources/gtk/home_episode_list.ui` | `lib/home_episode_list.rb` | list (date-bucketed) | yes |
+| `src/widgets/shows_view.rs` | `lib/shows_view.rb` | page (`GridView` of covers) | yes |
+| `src/widgets/queue_view.rs` + `queue_view.ui` | `lib/queue_view.rb` | page + empty state | yes |
+| `src/widgets/show.rs` + `show_widget.ui` | `lib/show_widget.rb` | page | yes |
+| `src/widgets/show_menu.rs` + `show_menu.ui` | `lib/show_menu.rb` | menu + action group | yes |
+| `resources/gtk/secondary_menu.ui` | not ported (noted in `lib/show_menu.rb`) | menu (dead: all three `action` attributes are commented out upstream) | n/a — deliberately skipped |
+| `src/widgets/filter_menu.rs` + `filter_menu.ui` | `lib/filter_menu.rb` | menu + stateful actions | yes |
 
 `content_stack.rs`: `Adw.ViewStack` with pages `home` ("New"), `shows`
 ("Shows"), `queue` ("Queue"); a `Gtk.Overlay` holding a `Gtk.ProgressBar` with
@@ -180,11 +202,11 @@ Not Downloaded.
 
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
-| `src/widgets/episode.rs` + `episode_widget.ui` | `lib/episode_widget.rb` | row | no |
-| `src/widgets/episode_menu.rs` + `episode_menu.ui` | `lib/episode_menu.rb` | menu + action group | no |
+| `src/widgets/episode.rs` + `episode_widget.ui` | `lib/episode_widget.rb` | row | yes |
+| `src/widgets/episode_menu.rs` + `episode_menu.ui` | `lib/episode_menu.rb` | menu + action group | yes |
 | `src/widgets/episode_description.rs` + `episode_description.ui` | `lib/episode_description.rb` | page | no |
-| `src/widgets/download_progress_bar.rs` | `lib/download_progress.rb` | widget | no |
-| `src/widgets/read_more_label.rs` | `lib/read_more_label.rb` | widget | no |
+| `src/widgets/download_progress_bar.rs` | `lib/download_progress.rb` | widget | yes |
+| `src/widgets/read_more_label.rs` | `lib/read_more_label.rb` | widget | yes |
 | `src/episode_description_parser.rs` | `lib/episode_description_parser.rb` | helper (HTML → Pango) | no |
 | `src/chapter_parser/{mod,id3,extended_comment}.rs` | `lib/chapter_parser.rb` | helper | no |
 
@@ -303,8 +325,8 @@ announces "Subscribing to feed…".
 
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
-| `src/widgets/empty_view.rs` + `empty_view.ui` | `lib/empty_view.rb` | empty state | no |
-| `src/widgets/empty_show.rs` + `empty_show.ui` | `lib/empty_show.rb` | empty state | no |
+| `src/widgets/empty_view.rs` + `empty_view.ui` | `lib/empty_view.rb` | empty state | yes |
+| `src/widgets/empty_show.rs` + `empty_show.ui` | `lib/empty_show.rb` | empty state | yes |
 
 `empty_view.ui`: `AdwBin` → `Adw.StatusPage` titled "Get Some Shows" with two
 hint rows, each a `dim-label` `Gtk.Image` (`list-add-symbolic`,
@@ -328,7 +350,7 @@ through `app.rs`'s toast handler into the window's `AdwToastOverlay`.
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
 | `src/widgets/sync_preferences.rs` + `sync_preferences.ui` | `lib/sync_preferences.rb` | preferences page | no |
-| `src/settings.rs` + `resources/org.gnome.Podcasts.gschema.xml.in` | `lib/settings.rb` | settings | no |
+| `src/settings.rs` + `resources/org.gnome.Podcasts.gschema.xml.in` | `lib/settings.rb` | settings | yes |
 
 `sync_preferences.ui` — `PdSyncPreferences(AdwNavigationPage)`, CSS
 `sync_preferences`: header with a `logout` `Gtk.Button` (`destructive-action`);
@@ -354,13 +376,13 @@ upstream, so the port needs no preferences dialog for them.
 
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
-| `src/utils.rs` (import/export `Gtk.FileDialog`s) | `lib/opml_dialogs.rb` | dialogs | no |
-| `src/manager.rs` | `lib/download_manager.rb` | download manager | no |
+| `src/utils.rs` (import/export `Gtk.FileDialog`s) | `lib/opml_dialogs.rb` | dialogs | yes |
+| `src/manager.rs` | `lib/download_manager.rb` | download manager | yes |
 | `src/download_covers.rs` | `lib/download_covers.rb` | helper | no |
 | `src/thumbnail_generator.rs` | `lib/thumbnail_generator.rb` | helper | no |
-| `resources/gtk/style.css` | `lib/style.rb` (CSS inline, loaded by a `Gtk::CssProvider`) | stylesheet | no |
+| `resources/gtk/style.css` | `lib/style.rb` (CSS inline, loaded by a `Gtk::CssProvider`) | stylesheet | yes |
 | `podcasts-gtk/po/` (45 locales, `POTFILES.in` listing 23 `.ui` + 3 resource + 23 Rust files) | `po/` + a gettext wiring in `lib/gnome_podcasts.rb` | translations | no |
-| `podcasts-data/` (whole crate) | `lib/` data layer (schema, dbqueries, feed/OPML parsing, discovery, Nextcloud sync, models) | back end | no |
+| `podcasts-data/` (whole crate) | `lib/` data layer (schema, dbqueries, feed/OPML parsing, discovery, Nextcloud sync, models) | back end | partial — schema, dbqueries, models, feed/OPML parsing, downloader present; discovery, Nextcloud sync and the chapter parsers absent |
 
 Import dialog: `Gtk.FileDialog`, OPML `Gtk.FileFilter` named "OPML file",
 accept label "_Import". Export dialog: same filter, title "Export shows to…",
@@ -382,24 +404,38 @@ Relative-time strings in `utils.rs` that the port must reproduce (plural forms):
 1. **No GStreamer binding in the dev shell.** `require "gst"` raises
    `LoadError`, so `src/player.rs`, `player_mpris.rs` and every play/pause/seek
    path have no engine. The player widgets can be built and wired to a stub, but
-   audio parity is blocked until the flake provides a `gst` gem.
-2. **`podcasts-data` is a whole Rust crate with no Ruby counterpart** — Diesel +
-   SQLite schema with 17 migrations, RSS/Atom feed parsing, OPML import/export,
-   iTunes and fyyd discovery, Nextcloud GPodder sync, ID3 and extended-comment
-   chapter parsing. Almost every UI component is a view over it, so the port
-   needs at least a read-only data layer before any page can show real content.
-3. **MPRIS / `Gio::DBus` desktop integration** (`player_mpris.rs`) has no
+   audio parity is blocked until the flake provides a `gst` gem. This also holds
+   back `main_window.rb`'s `AdwMultiLayoutView` / `AdwBottomSheet` half, which
+   exists only to host the player, and the Player section of
+   `shortcuts_dialog.rb`.
+2. **No covers anywhere yet.** `src/download_covers.rs` and
+   `src/thumbnail_generator.rs` are unported, so `shows_view.rb`,
+   `show_widget.rb` and `episode_widget.rb` all render the icon fallback in place
+   of artwork. Three in-tree comments point at `lib/download_covers.rb` as the
+   file that fixes it.
+3. **`podcasts-data` is ported only as far as the local database.** Present:
+   the schema and its 17 migrations, `dbqueries`, the five models, RSS/Atom feed
+   parsing, OPML import/export, the downloader. Absent: iTunes and fyyd
+   discovery (`src/discovery/`), the whole Nextcloud GPodder sync
+   (`src/nextcloud_sync/`, `src/models/sync/`), and the ID3 /
+   extended-comment chapter parsers. The discovery pages and the sync
+   preferences page cannot be ported before their data layer.
+4. **MPRIS / `Gio::DBus` desktop integration** (`player_mpris.rs`) has no
    established pattern in the pilot ports.
-4. **No `.ui` files by house rule.** All 24 GtkBuilder trees, including
-   `window.ui`'s `AdwMultiLayoutView` layout slots and three breakpoints, must be
-   transcribed into memoized Ruby builders by hand. The Adwaita types themselves
-   are all present (verified above), so this is volume, not capability.
 5. **Drag-and-drop queue reordering** in `episode_widget.ui` (two drop-target
    revealers, a drag handle, a `card dragged-episode-icon` drag icon) needs
-   `Gtk::DragSource`/`DropTarget` wiring the pilot does not demonstrate.
+   `Gtk::DragSource`/`DropTarget` wiring the pilot does not demonstrate. The
+   queue rows exist in `queue_view.rb`; the reordering does not.
 6. **Translations are untouched.** 45 locales exist upstream; the port has no
-   `po/` directory and no gettext call anywhere, so every string listed above is
-   currently English-only.
-7. **`secondary_menu.ui` is dead upstream** — its three items have their `action`
-   attributes commented out. Port it as the stub it is, or fold it into
-   `show_menu.rb`; do not invent actions for it.
+   `po/` directory and no gettext call in any of the 45 `lib/*.rb` files, so
+   every string in the inventory above is currently English-only. The
+   `# Translators:` comments upstream carries are preserved in `main_menu.rb`
+   and `shortcuts_dialog.rb`, which is as far as it goes.
+7. **`secondary_menu.ui` is dead upstream** — its three items have their
+   `action` attributes commented out. `lib/show_menu.rb` records this and does
+   not port it; do not invent actions for it.
+8. **No `.ui` files by house rule.** The remaining 13 unported GtkBuilder trees
+   (the 8 player/sheet/chapters ones, the 3 discovery ones,
+   `episode_description.ui` and `sync_preferences.ui`) must be transcribed into
+   memoized Ruby builders by hand. The Adwaita types are all present (verified
+   above), so this is volume, not capability.
