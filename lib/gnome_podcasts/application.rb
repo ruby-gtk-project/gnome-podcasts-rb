@@ -5,6 +5,7 @@ require "adwaita"
 
 require_relative "../data_utils"
 require_relative "../dbqueries"
+require_relative "../download_covers"
 require_relative "../download_manager"
 require_relative "../feed_manager"
 require_relative "../icons"
@@ -25,7 +26,7 @@ module GnomePodcasts
   # widgets hold this object and call the method named after the action. The
   # set of methods below is that enum, minus the variants that belong to
   # components the port has not reached yet (the player, the chapters, the
-  # episode description page, the discovery pages and the Nextcloud sync).
+  # episode description page and the Nextcloud sync).
   #
   # House style (see .claude/skills/ruby-gtk): every widget is a memoized
   # method, all configuration lives in its `tap`, assembly happens only in
@@ -34,18 +35,19 @@ module GnomePodcasts
     APP_ID = "org.rubygtkproject.GnomePodcasts"
     DOWNLOAD_WATCH_INTERVAL = 500
 
-    # Upstream's setup_accels, minus the player's and the discovery page's.
+    # Upstream's setup_accels, minus the player's.
     ACCELS = {
-      "app.quit"        => ["<Control>q"],
-      "app.shortcuts"   => ["<Control>question"],
-      "win.open-search" => ["<Control>f"],
-      "win.refresh"     => ["<Control>r", "F5"],
-      "win.go-to-home"  => ["F1", "<Alt>1"],
-      "win.go-to-shows" => ["F2", "<Alt>2"],
-      "win.go-to-queue" => ["F3", "<Alt>3"],
-      "win.import"      => ["<Control>o"],
-      "win.export"      => ["<Control>e"],
-      "window.close"    => ["<Control>w"],
+      "app.quit"            => ["<Control>q"],
+      "app.shortcuts"       => ["<Control>question"],
+      "win.open-search"     => ["<Control>f"],
+      "win.refresh"         => ["<Control>r", "F5"],
+      "win.go-to-home"      => ["F1", "<Alt>1"],
+      "win.go-to-shows"     => ["F2", "<Alt>2"],
+      "win.go-to-queue"     => ["F3", "<Alt>3"],
+      "win.go-to-discovery" => ["F4", "<Alt>4", "<Control>n"],
+      "win.import"          => ["<Control>o"],
+      "win.export"          => ["<Control>e"],
+      "window.close"        => ["<Control>w"],
     }.freeze
 
     def initialize(settings: nil, present: true)
@@ -130,6 +132,11 @@ module GnomePodcasts
       if main_window.show_widget && main_window.show_widget.show_id == show_id
         main_window.show_widget.reload
       end
+    end
+
+    # Upstream's Action::GoToFoundPodcasts.
+    def go_to_found_podcasts(results)
+      main_window.go_to_found_podcasts(results)
     end
 
     # Upstream's Action::ReplaceWidget plus GoToShow.
@@ -280,6 +287,7 @@ module GnomePodcasts
       # Upstream's startup: garbage collect the episodes whose cleanup age has
       # passed before anything is shown.
       def on_startup
+        DownloadCovers.clean_unfinished_downloads
         DataUtils.checkup(settings.cleanup_date)
       rescue StandardError => e
         warn "Check up failed: #{e.message}"

@@ -3,6 +3,8 @@
 require "adwaita"
 require_relative "about_dialog"
 require_relative "content_stack"
+require_relative "discovery_page"
+require_relative "discovery_search_results"
 require_relative "feed_manager"
 require_relative "filter_menu"
 require_relative "main_menu"
@@ -25,8 +27,7 @@ require_relative "opml_dialogs"
 # installed rather than installed as actions that would do nothing: the player
 # ones (win.play, win.pause, win.toggle-pause, win.seek-*, win.set-rate,
 # win.raise/lower-playback-rate, win.close-bottom-sheet) arrive with
-# lib/player.rb, win.go-to-discovery with lib/discovery_page.rb, and
-# win.goto-sync-preferences with lib/sync_preferences.rb.
+# lib/player.rb, and win.goto-sync-preferences with lib/sync_preferences.rb.
 class MainWindow
   TITLE = "Podcasts"
   WIDTH_REQUEST = 360
@@ -71,6 +72,7 @@ class MainWindow
 
         header_bar.tap do |header|
           header.title_widget = top_switcher
+          header.pack_start(add_feed_button)
           header.pack_end(hamburger)
           header.pack_end(filter_stack)
 
@@ -135,6 +137,17 @@ class MainWindow
   end
 
   def show_widget = @show_widget
+
+  # Upstream's go_to_discovery: a fresh page each time, as upstream builds
+  # one per visit.
+  def go_to_discovery
+    push_page(DiscoveryPage.new(app: app).build)
+  end
+
+  # Upstream's Action::GoToFoundPodcasts.
+  def go_to_found_podcasts(results)
+    push_page(DiscoverySearchResults.new(app: app, results: results).build)
+  end
 
   # Upstream's go_to_show_widget.
   def go_to_show_widget
@@ -248,6 +261,14 @@ class MainWindow
     end
   end
 
+  def add_feed_button
+    @add_feed_button ||= Gtk::Button.new.tap do |button|
+      button.tooltip_text = "Add a New Feed"
+      button.icon_name = "list-add-symbolic"
+      button.action_name = "win.go-to-discovery"
+    end
+  end
+
   def hamburger
     @hamburger ||= Gtk::MenuButton.new.tap do |button|
       button.icon_name = "open-menu-symbolic"
@@ -265,14 +286,15 @@ class MainWindow
   # The window actions, with the accelerators the application binds to them.
   def actions
     {
-      "refresh"     => -> { app.refresh_feeds },
-      "import"      => -> { opml_dialogs.import },
-      "export"      => -> { opml_dialogs.export },
-      "about"       => -> { AboutDialog.new(window).present },
-      "go-to-home"  => -> { go_to_page { content.go_to_home } },
-      "go-to-shows" => -> { go_to_page { content.go_to_shows } },
-      "go-to-queue" => -> { go_to_page { content.go_to_queue } },
-      "open-search" => -> { open_search },
+      "refresh"         => -> { app.refresh_feeds },
+      "import"          => -> { opml_dialogs.import },
+      "export"          => -> { opml_dialogs.export },
+      "about"           => -> { AboutDialog.new(window).present },
+      "go-to-home"      => -> { go_to_page { content.go_to_home } },
+      "go-to-shows"     => -> { go_to_page { content.go_to_shows } },
+      "go-to-queue"     => -> { go_to_page { content.go_to_queue } },
+      "go-to-discovery" => -> { go_to_discovery },
+      "open-search"     => -> { open_search },
     }
   end
 

@@ -3,6 +3,7 @@
 require "adwaita"
 require_relative "base_view"
 require_relative "dbqueries"
+require_relative "download_covers"
 require_relative "empty_show"
 require_relative "episode_widget"
 require_relative "filter_menu"
@@ -63,6 +64,12 @@ class ShowWidget
 
         sub_container.tap do |box|
           box.append(cover)
+          DownloadCovers.load_widget_texture(
+            cover,
+            show.id,
+            COVER_SIZE,
+            set_tooltip: true,
+          )
           box.append(description_clamp)
           box.append(episodes_container)
 
@@ -164,8 +171,8 @@ class ShowWidget
     end
   end
 
-  # The cover image itself arrives with lib/download_covers.rb; until then the
-  # page shows the same fallback upstream shows while a cover loads.
+  # Upstream's set_cover: the 256px thumbnail, with the show's title as the
+  # tooltip, over the fallback the page shows while it is being fetched.
   def cover
     @cover ||= Gtk::Image.new(icon_name: "image-missing-symbolic").tap do |image|
       image.pixel_size = COVER_SIZE

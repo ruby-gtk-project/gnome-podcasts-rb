@@ -12,7 +12,7 @@ require "adwaita"
 #
 # The items whose action the port has not reached yet are left out rather than
 # listed as shortcuts that do nothing: the Player section arrives with
-# lib/player.rb, and "Go To Discovery Page" with lib/discovery_page.rb.
+# lib/player.rb.
 class ShortcutsDialog < Adwaita::ShortcutsDialog
   SECTIONS = {
     "Navigation" => [
@@ -21,6 +21,8 @@ class ShortcutsDialog < Adwaita::ShortcutsDialog
       ["Go to Shows Page", "F2"],
       # Translators: Queue as a Noun
       ["Go to Queue Page", "F3"],
+      # Translators: 'Discovery' is a page where you can add new podcasts
+      ["Go To Discovery Page", "F4"],
     ],
     "General"    => [
       ["Check for new episodes", "<Control>r"],

@@ -2,6 +2,7 @@
 
 require "adwaita"
 require_relative "dbqueries"
+require_relative "download_covers"
 require_relative "download_manager"
 require_relative "download_progress"
 require_relative "episode_menu"
@@ -59,6 +60,12 @@ class EpisodeWidget
       content_box.tap do |box|
         box.append(drag_handle)
         box.append(cover)
+        DownloadCovers.load_widget_texture(
+          cover,
+          episode.show_id,
+          COVER_SIZE,
+          set_tooltip: true,
+        )
         box.append(info_box)
 
         info_box.tap do |info|
@@ -173,9 +180,8 @@ class EpisodeWidget
     end
   end
 
-  # No cover is downloaded yet — lib/download_covers.rb is what fills this in,
-  # and until then the row shows the same fallback upstream shows while a
-  # cover is still loading.
+  # Upstream's set_cover: the 64px thumbnail, with the show's title as the
+  # tooltip, over the fallback the row shows while it is being fetched.
   def cover
     @cover ||= Gtk::Image.new(icon_name: "image-missing-symbolic").tap do |image|
       image.pixel_size = COVER_SIZE

@@ -3,6 +3,7 @@
 require "adwaita"
 require_relative "base_view"
 require_relative "dbqueries"
+require_relative "download_covers"
 require_relative "utils"
 
 # ShowsView is the Shows page: a grid of covers, one per subscription.
@@ -20,6 +21,8 @@ require_relative "utils"
 # factory and the activation handler read the show back out by position.
 class ShowsView
   COVER_SIZE = 150
+  # Upstream's Thumb256, the thumbnail size the grid's covers come from.
+  THUMB_SIZE = 256
   MIN_COLUMNS = 2
   MAX_COLUMNS = 7
   # picture + paddings * max_columns, as upstream computes it
@@ -160,9 +163,9 @@ class ShowsView
     end
   end
 
-  # The factory builds one picture per item and labels it with the show's
-  # title; the cover image itself arrives with lib/download_covers.rb, so for
-  # now every cell shows the fallback upstream shows before a cover loads.
+  # The factory builds one picture per item, labels it with the show's title
+  # and asks lib/download_covers.rb for the 256px thumbnail, which arrives
+  # once it has been fetched and generated.
   def factory
     @factory ||= Gtk::SignalListItemFactory.new.tap do |signal_factory|
       signal_factory.signal_connect("setup") { |_, item| item.child = cover_picture }
@@ -194,7 +197,12 @@ class ShowsView
     def bind_cover(item)
       @shows[item.position].then do |show|
         if show
-          item.child.tooltip_text = show.title
+          DownloadCovers.load_widget_texture(
+            item.child,
+            show.id,
+            THUMB_SIZE,
+            set_tooltip: true,
+          )
         end
       end
     end
