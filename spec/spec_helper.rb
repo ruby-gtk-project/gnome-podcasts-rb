@@ -16,12 +16,22 @@ begin
   end
 rescue LoadError => error
   # check the error message and re-raise when unexpected
-  raise error unless error.message.include?("kettle")
+  unless error.message.include?("kettle")
+    raise error
+  end
 end
 
 # External RSpec & related config
-require "kettle/test/rspec"
-# `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+begin
+  require "kettle/test/rspec"
+  # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+rescue LoadError => error
+  # The nix dev shell carries plain RSpec and the app's runtime gems, not the
+  # kettle development stack, so the suite runs there without the harness.
+  unless error.message.include?("kettle")
+    raise error
+  end
+end
 
 # This library
 require "gnome/podcasts/rb"

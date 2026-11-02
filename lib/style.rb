@@ -1,0 +1,180 @@
+# frozen_string_literal: true
+
+require "gtk4"
+
+# Style is the app's stylesheet.
+#
+# Ported from podcasts-gtk/resources/gtk/style.css, which upstream ships inside
+# its GResource bundle and loads through the resource path. The port has no
+# resource bundle, so the same rules live here as a string and go in through a
+# CssProvider on the default display.
+module Style
+  CSS = <<~CSS
+    progressbar.playback-progress trough {
+        border-radius: 3px;
+    }
+    progressbar.playback-progress trough progress {
+        border-radius: 3px;
+        border-right: none;
+        border-left: none;
+    }
+
+    popover modelbutton > box > label {
+        font-feature-settings: "tnum";
+    }
+
+    /* Episode description */
+    .episode_description_label link {
+        text-decoration: none;
+    }
+
+    .episode_description .button-row {
+        padding: 15px 0px;
+    }
+
+    .episode_description .button-row button {
+        padding: 10px 20px;
+    }
+
+    .episode_description .button-row button image {
+        padding-right: 5px;
+    }
+
+    .episode_description .button-row .cancel-button {
+        padding: 0px 0px;
+    }
+
+    .episode_description .button-row .cancel-button .cancel-button-text {
+        padding: 12px 20px;
+        padding-bottom: 11px;
+    }
+
+    .episode_description .button-row .cancel-button progressbar {
+        padding: 0px;
+    }
+
+    .episode_description progressbar {
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 15px;
+    }
+
+    .episode_description progressbar trough {
+        min-height: 3px;
+        border-top-left-radius: 0px;
+        border-top-right-radius: 0px;
+    }
+    .episode_description progressbar trough progress {
+        border-top-left-radius: 0px;
+        border-top-right-radius: 0px;
+    }
+
+    /* Discovery Search */
+    .rounded-big {
+        border-radius: 8px;
+    }
+
+    .rounded-small {
+        border-radius: 4px;
+    }
+
+    .show-button {
+        padding: 0px;
+    }
+
+    .taller-button {
+        padding-top: 4px;
+        padding-bottom: 4px;
+    }
+
+    .shows-grid {
+        background: transparent;
+        padding-top: 12px;
+        padding-bottom: 26px;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    .shows-grid > * {
+        padding: 0px;
+        margin: 6px;
+    }
+
+    .in-button-progress > progressbar > trough {
+        background-color: transparent;
+    }
+
+    .in-button-progress > progressbar > trough > progress {
+        border-radius: 0px;
+    }
+
+    .no-edit-icon .edit-icon {
+        opacity: 0;
+    }
+
+    .circle-overlay {
+        border-radius: 50px;
+        background-color: var(--accent-bg-color);
+        padding: 4px;
+    }
+
+    searchbar box {
+        background-color: var(--window-bg-color);
+        padding-top: 0px; /* header-bar already provides spacing */
+    }
+
+    .drop-target {
+        background-color: color-mix(in srgb, var(--accent-bg-color) 30%, transparent);
+        padding: 2px;
+        border-radius: 2px;
+    }
+
+    /* Keep first drop target border radius concentric, 12px is the card_radius in libadwaita */
+    .boxed-list row:first-child .drop-target-top {
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+    }
+
+    /* Keep last drop target border radius concentric, 12px is the card_radius in libadwaita */
+    .boxed-list row:last-child .drop-target-bottom {
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    .dragged-episode-icon {
+      background-color: white;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .dragged-episode-icon {
+        background-color: color-mix(in srgb, white 8%, var(--window-bg-color));
+      }
+    }
+
+    row:drop(active) {
+        outline: none;
+        box-shadow: none;
+        border: none;
+    }
+  CSS
+
+  class << self
+    # Loads the stylesheet onto the default display. Safe to call more than
+    # once: the provider is memoized, so a second call re-uses it.
+    def load
+      Gdk::Display.default.then do |display|
+        if display
+          Gtk::StyleContext.add_provider_for_display(
+            display,
+            provider,
+            Gtk::StyleProvider::PRIORITY_APPLICATION,
+          )
+        end
+      end
+    end
+
+    def provider
+      @provider ||= Gtk::CssProvider.new.tap { |css| css.load(data: CSS) }
+    end
+  end
+end
