@@ -25,8 +25,8 @@ module GnomePodcasts
   # `do_action` drains on the main loop; the port has no channel, so the
   # widgets hold this object and call the method named after the action. The
   # set of methods below is that enum, minus the variants that belong to
-  # components the port has not reached yet (the player, the chapters, the
-  # episode description page and the Nextcloud sync).
+  # components the port has not reached yet (the player and the Nextcloud
+  # sync).
   #
   # House style (see .claude/skills/ruby-gtk): every widget is a memoized
   # method, all configuration lives in its `tap`, assembly happens only in
@@ -122,6 +122,9 @@ module GnomePodcasts
         if main_window.show_widget
           main_window.show_widget.update_episode(episode)
         end
+        if main_window.episode_description_widget&.id == episode_id
+          main_window.episode_description_widget.update_episode(episode)
+        end
       end
     rescue KeyError => e
       warn "failed to fetch episode for refresh: #{e.message}"
@@ -147,6 +150,13 @@ module GnomePodcasts
 
     def go_to_show_by_id(show_id)
       go_to_show(Dbqueries.podcast_from_id(show_id))
+    end
+
+    # Upstream's episode row activation, which upstream reaches through
+    # ListBoxes's row-activated connecting directly to opening the episode
+    # description page.
+    def go_to_episode_description(episode)
+      main_window.go_to_episode_description(episode, Dbqueries.podcast_from_id(episode.show_id))
     end
 
     # Upstream's Action::MarkAsPlayed.

@@ -117,6 +117,7 @@ class HomeEpisodeList
       list_box.activate_on_single_click = true
       list_box.selection_mode = :none
       list_box.add_css_class("content")
+      list_box.signal_connect("row-activated") { |_, row| on_row_activated(row) }
     end
   end
 
@@ -159,6 +160,13 @@ class HomeEpisodeList
         @rows[episode.id] = widget
         widget.build
       end
+    end
+
+    # Upstream's row-activated handler: open the clicked episode's
+    # description page, the same way EpisodeMenu's "go-to-show" finds a
+    # widget's episode back from the row GTK handed it.
+    def on_row_activated(row)
+      @rows.each_value { |widget| app.go_to_episode_description(widget.episode) if widget.row.equal?(row) }
     end
 
     # Upstream's split/split_model: today, yesterday, the rest of this week,

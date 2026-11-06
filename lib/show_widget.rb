@@ -198,6 +198,7 @@ class ShowWidget
       list_box.selection_mode = :none
       list_box.activate_on_single_click = true
       list_box.add_css_class("content")
+      list_box.signal_connect("row-activated") { |_, row| on_row_activated(row) }
     end
   end
 
@@ -245,6 +246,10 @@ class ShowWidget
         @rows[episode.id] = widget
         widget.build
       end
+    end
+
+    def on_row_activated(row)
+      @rows.each_value { |widget| app.go_to_episode_description(widget.episode) if widget.row.equal?(row) }
     end
 
     def clear_listbox

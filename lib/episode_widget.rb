@@ -25,8 +25,10 @@ require_relative "utils"
 #
 # The two states that need a player, Playing and Playable's play button, are
 # left out until lib/player.rb exists rather than shown as buttons that would
-# do nothing; the same goes for the row's "open the episode description"
-# activation, which arrives with lib/episode_description.rb.
+# do nothing. The row's "open the episode description" activation lives one
+# level up, on the list box that holds this row (see home_episode_list.rb,
+# show_widget.rb and queue_view.rb's "row-activated" handlers), since that is
+# where the episode this row's `row` maps to is already tracked.
 class EpisodeWidget
   COVER_SIZE = 64
   # The cover's size plus its 6px margins, from the .ui file's comment.

@@ -5,6 +5,7 @@ require_relative "about_dialog"
 require_relative "content_stack"
 require_relative "discovery_page"
 require_relative "discovery_search_results"
+require_relative "episode_description"
 require_relative "feed_manager"
 require_relative "filter_menu"
 require_relative "main_menu"
@@ -148,6 +149,15 @@ class MainWindow
   def go_to_found_podcasts(results)
     push_page(DiscoverySearchResults.new(app: app, results: results).build)
   end
+
+  # Upstream's episode row activation: a fresh page each visit, tracked so a
+  # RefreshEpisode for the episode it shows reaches it too.
+  def go_to_episode_description(episode, show)
+    @episode_description_widget = EpisodeDescription.new(app: app, episode: episode, show: show)
+    push_page(@episode_description_widget.build)
+  end
+
+  def episode_description_widget = @episode_description_widget
 
   # Upstream's go_to_show_widget.
   def go_to_show_widget
