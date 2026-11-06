@@ -109,6 +109,12 @@ Gem::Specification.new do |spec|
   #       Development dependencies that require strictly newer Ruby versions should be in a "gemfile",
   #       and preferably a modular one (see gemfiles/modular/*.gemfile).
 
+  # Runtime
+  spec.add_dependency("glib2")                                                      # ruby >= 2.5, GLib base types the rest of ruby-gnome builds on
+  spec.add_dependency("gtk4")                                                       # ruby >= 2.5, the widget toolkit the app is built with
+  spec.add_dependency("adwaita")                                                    # ruby >= 2.5, GNOME's Libadwaita widgets
+  spec.add_dependency("gstreamer_play")                                             # ruby >= 3.4, GstPlay playback for the episode player
+
   # Dev, Test, & Release Tasks
   spec.add_development_dependency("kettle-dev", "~> 3.1", ">= 3.1.26")             # ruby >= 3.4
 
