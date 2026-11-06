@@ -12,8 +12,11 @@ one `lib/*.rb`, so the rows below are unioned per port file.
 
 ## State of the port
 
-`lib/` on `ruby` now holds 45 files: the data layer, the application, the main
-window and the three content pages, ported in commit `f0c12cc6`.
+`lib/` on `ruby` now holds 49 files (45 at the last inventory, plus 4 net new —
+`http.rb`, `discovery.rb`, `discovery_page.rb`, `discovery_search_results.rb`,
+`discovery_found_podcast.rb` and `episode_description_parser.rb` arrived in
+commit `0c41aa38`, folding `download_covers.rb` and `thumbnail_generator.rb`
+into the "present" column and no longer blocking cover art).
 
 Present (one `lib/*.rb` per upstream component, every file carrying the
 `Ported from podcasts-…` comment the house style asks for):
@@ -24,32 +27,42 @@ Present (one `lib/*.rb` per upstream component, every file carrying the
   `home_episode_list.rb`, `shows_view.rb`, `queue_view.rb`, `show_widget.rb`,
   `show_menu.rb`, `filter_menu.rb`
 - **Episodes** — `episode_widget.rb`, `episode_menu.rb`, `download_progress.rb`,
-  `read_more_label.rb`
+  `read_more_label.rb`, `episode_description_parser.rb`
+- **Discovery** — `discovery.rb` (data layer: iTunes + fyyd search),
+  `discovery_page.rb`, `discovery_search_results.rb`, `discovery_found_podcast.rb`
 - **Empty states** — `empty_view.rb`, `empty_show.rb`
 - **Support** — `settings.rb`, `style.rb`, `icons.rb`, `opml_dialogs.rb`,
-  `download_manager.rb`, `utils.rb`, `xdg_dirs.rb`
+  `download_manager.rb`, `download_covers.rb`, `thumbnail_generator.rb`,
+  `http.rb`, `utils.rb`, `xdg_dirs.rb`
 - **Data layer** — `database.rb`, `dbqueries.rb`, `show.rb`, `episode.rb`,
   `source.rb`, `queue_item.rb`, `feed.rb`, `feed_manager.rb`, `opml.rb`,
   `parser.rb`, `pipeline.rb`, `xml_parser.rb`, `data_utils.rb`, `errors.rb`
 
-Three of the present files are **partial**, and each knows it:
+Three of the present files are still **partial**, unchanged by commit
+`0c41aa38`:
 
-- `gnome_podcasts/application.rb` carries 11 of upstream's 25 accelerators and
-  none of the player, chapters or discovery actions. Upstream's `Action` channel
-  is replaced by direct method calls on this object.
+- `gnome_podcasts/application.rb` carries 12 of upstream's 25 accelerators
+  (discovery's `win.go-to-discovery` → `F4`/`<Alt>4`/`<Control>n` is now in,
+  verified at `lib/gnome_podcasts/application.rb:47`) and none of the player or
+  chapters actions. Upstream's `Action` channel is replaced by direct method
+  calls on this object.
 - `main_window.rb` has the toast overlay, navigation view, both view switchers,
-  the `toolbar` center box and the narrow breakpoint — but **not** the
+  the `toolbar` center box, the narrow breakpoint, and the header's
+  "Add a New Feed" button wired to `win.go-to-discovery` — but **not** the
   `AdwMultiLayoutView`, its `wide`/`narrow` layouts, the four layout slots, the
   `AdwBottomSheet` or the two player breakpoints, because all of those exist to
   host the player.
-- `shortcuts_dialog.rb` lists 8 of upstream's 14 items: Navigation and General,
-  minus "Go To Discovery Page". The whole Player section is absent.
+- `shortcuts_dialog.rb` now lists 9 of upstream's 14 items: Navigation
+  (including "Go To Discovery Page", restored by commit `0c41aa38`) and
+  General. The whole Player section is still absent.
 
 Still entirely missing (every row below marked `no`): the **player** stack
-(10 files), the **discovery** pages (3 files), the **episode description** page,
-the **chapters** page and both parsers, **sync preferences** and the whole
-Nextcloud sync data layer, `download_covers`, `thumbnail_generator`, and the
-`po/` catalogue.
+(10 files: `player_wrapper`, `player_big`, `player_small`, `player_rate`,
+`sheet_base`, `sheet_player`, `sheet_description`, `chapters`, `player`,
+`player_mpris`), the **episode description** page (`episode_description.rb`,
+distinct from `episode_description_parser.rb`, which is now ported), the
+chapter parsers (`chapter_parser.rb`), **sync preferences** and the whole
+Nextcloud sync data layer, and the `po/` catalogue.
 
 ## Environment facts verified in the fork's dev shell
 
@@ -207,8 +220,13 @@ Not Downloaded.
 | `src/widgets/episode_description.rs` + `episode_description.ui` | `lib/episode_description.rb` | page | no |
 | `src/widgets/download_progress_bar.rs` | `lib/download_progress.rb` | widget | yes |
 | `src/widgets/read_more_label.rs` | `lib/read_more_label.rb` | widget | yes |
-| `src/episode_description_parser.rs` | `lib/episode_description_parser.rb` | helper (HTML → Pango) | no |
+| `src/episode_description_parser.rs` | `lib/episode_description_parser.rb` | helper (HTML → Pango) | yes |
 | `src/chapter_parser/{mod,id3,extended_comment}.rs` | `lib/chapter_parser.rb` | helper | no |
+
+`episode_description_parser.rb` (ported in commit `0c41aa38`): passes all 13 of
+upstream's own test cases byte for byte, including two intentional oddities of
+upstream's output that a comment at the top of the file explains are kept on
+purpose.
 
 `episode_widget.ui` — `PdEpisode(GtkListBoxRow)`: `Gtk.Revealer`
 (`main_revealer`); drag/drop target revealers with `AdwBin`s carrying CSS
@@ -296,9 +314,17 @@ pushed as `adw::NavigationPage::with_tag(…, "Chapters", "chapters")`.
 
 | Upstream | → port file | Kind | Exists |
 |---|---|---|---|
-| `src/widgets/discovery_page.rs` + `discovery_page.ui` | `lib/discovery_page.rb` | page | no |
-| `src/widgets/discovery_search_results.rs` + `discovery_search_results.ui` | `lib/discovery_search_results.rb` | page | no |
-| `resources/gtk/discovery_found_podcast.ui` | `lib/discovery_found_podcast.rb` | row | no |
+| `src/widgets/discovery_page.rs` + `discovery_page.ui` | `lib/discovery_page.rb` | page | yes |
+| `src/widgets/discovery_search_results.rs` + `discovery_search_results.ui` | `lib/discovery_search_results.rb` | page | yes |
+| `resources/gtk/discovery_found_podcast.ui` | `lib/discovery_found_podcast.rb` | row | yes |
+| `src/discovery/{mod,data,itunes,fyyd,search}.rs` | `lib/discovery.rb` | data layer (platform search) | yes |
+
+Ported in commit `0c41aa38`. `win.go-to-discovery` is installed with
+upstream's `F4` / `<Alt>4` / `<Control>n` accelerators (verified at
+`lib/gnome_podcasts/application.rb:47`), the "Add a New Feed" button is wired
+in `main_window.rb`, and "Go To Discovery Page" is back in
+`shortcuts_dialog.rb`. `utils.rb` grew upstream's subscribe flow plus the
+iTunes and SoundCloud URL rewrites the page does before subscribing.
 
 `discovery_page.ui`: `AdwNavigationPage` → `AdwToolbarView` → `Adw.HeaderBar`;
 `Adw.Clamp` → `boxed-list` box with a `heading` label, `entry_description`
@@ -378,8 +404,9 @@ upstream, so the port needs no preferences dialog for them.
 |---|---|---|---|
 | `src/utils.rs` (import/export `Gtk.FileDialog`s) | `lib/opml_dialogs.rb` | dialogs | yes |
 | `src/manager.rs` | `lib/download_manager.rb` | download manager | yes |
-| `src/download_covers.rs` | `lib/download_covers.rb` | helper | no |
-| `src/thumbnail_generator.rs` | `lib/thumbnail_generator.rb` | helper | no |
+| `src/download_covers.rs` | `lib/download_covers.rb` | helper | yes |
+| `src/thumbnail_generator.rs` | `lib/thumbnail_generator.rb` | helper | yes |
+| `src/http.rs` | `lib/http.rb` | helper (HTTP client) | yes |
 | `resources/gtk/style.css` | `lib/style.rb` (CSS inline, loaded by a `Gtk::CssProvider`) | stylesheet | yes |
 | `podcasts-gtk/po/` (45 locales, `POTFILES.in` listing 23 `.ui` + 3 resource + 23 Rust files) | `po/` + a gettext wiring in `lib/gnome_podcasts.rb` | translations | no |
 | `podcasts-data/` (whole crate) | `lib/` data layer (schema, dbqueries, feed/OPML parsing, discovery, Nextcloud sync, models) | back end | partial — schema, dbqueries, models, feed/OPML parsing, downloader present; discovery, Nextcloud sync and the chapter parsers absent |
@@ -408,18 +435,19 @@ Relative-time strings in `utils.rs` that the port must reproduce (plural forms):
    back `main_window.rb`'s `AdwMultiLayoutView` / `AdwBottomSheet` half, which
    exists only to host the player, and the Player section of
    `shortcuts_dialog.rb`.
-2. **No covers anywhere yet.** `src/download_covers.rs` and
-   `src/thumbnail_generator.rs` are unported, so `shows_view.rb`,
-   `show_widget.rb` and `episode_widget.rb` all render the icon fallback in place
-   of artwork. Three in-tree comments point at `lib/download_covers.rb` as the
-   file that fixes it.
-3. **`podcasts-data` is ported only as far as the local database.** Present:
-   the schema and its 17 migrations, `dbqueries`, the five models, RSS/Atom feed
-   parsing, OPML import/export, the downloader. Absent: iTunes and fyyd
-   discovery (`src/discovery/`), the whole Nextcloud GPodder sync
-   (`src/nextcloud_sync/`, `src/models/sync/`), and the ID3 /
-   extended-comment chapter parsers. The discovery pages and the sync
-   preferences page cannot be ported before their data layer.
+2. ~~No covers anywhere yet.~~ **Resolved in commit `0c41aa38`.**
+   `download_covers.rb` and `thumbnail_generator.rb` are ported; a worker
+   thread downloads and generates the four thumbnails upstream generates, and
+   covers now render in the shows grid, episode rows and the show page instead
+   of the icon fallback.
+3. **`podcasts-data`'s Nextcloud sync half is still unported.** Present as of
+   commit `0c41aa38`: the schema and its 17 migrations, `dbqueries`, the five
+   models, RSS/Atom feed parsing, OPML import/export, the downloader, and now
+   iTunes/fyyd discovery (`src/discovery/` → `lib/discovery.rb`). Absent: the
+   whole Nextcloud GPodder sync (`src/nextcloud_sync/`, `src/models/sync/`) and
+   the ID3 / extended-comment chapter parsers. The sync preferences page cannot
+   be ported before its data layer; the discovery pages no longer block on
+   this (they are ported).
 4. **MPRIS / `Gio::DBus` desktop integration** (`player_mpris.rs`) has no
    established pattern in the pilot ports.
 5. **Drag-and-drop queue reordering** in `episode_widget.ui` (two drop-target
@@ -427,15 +455,16 @@ Relative-time strings in `utils.rs` that the port must reproduce (plural forms):
    `Gtk::DragSource`/`DropTarget` wiring the pilot does not demonstrate. The
    queue rows exist in `queue_view.rb`; the reordering does not.
 6. **Translations are untouched.** 45 locales exist upstream; the port has no
-   `po/` directory and no gettext call in any of the 45 `lib/*.rb` files, so
+   `po/` directory and no gettext call in any of the 49 `lib/*.rb` files, so
    every string in the inventory above is currently English-only. The
    `# Translators:` comments upstream carries are preserved in `main_menu.rb`
    and `shortcuts_dialog.rb`, which is as far as it goes.
 7. **`secondary_menu.ui` is dead upstream** — its three items have their
    `action` attributes commented out. `lib/show_menu.rb` records this and does
    not port it; do not invent actions for it.
-8. **No `.ui` files by house rule.** The remaining 13 unported GtkBuilder trees
-   (the 8 player/sheet/chapters ones, the 3 discovery ones,
-   `episode_description.ui` and `sync_preferences.ui`) must be transcribed into
-   memoized Ruby builders by hand. The Adwaita types are all present (verified
-   above), so this is volume, not capability.
+8. **No `.ui` files by house rule.** The remaining 10 unported GtkBuilder trees
+   (the 8 player/sheet/chapters ones, plus `episode_description.ui` and
+   `sync_preferences.ui`) must be transcribed into memoized Ruby builders by
+   hand. The Adwaita types are all present (verified above), so this is volume,
+   not capability. (The 3 discovery `.ui` trees that were on this list at the
+   last inventory are now ported.)
