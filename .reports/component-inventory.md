@@ -223,10 +223,15 @@ Not Downloaded.
 | `src/episode_description_parser.rs` | `lib/episode_description_parser.rb` | helper (HTML → Pango) | yes |
 | `src/chapter_parser/{mod,id3,extended_comment}.rs` | `lib/chapter_parser.rb` | helper | no |
 
-`episode_description_parser.rb` (ported in commit `0c41aa38`): passes all 13 of
-upstream's own test cases byte for byte, including two intentional oddities of
-upstream's output that a comment at the top of the file explains are kept on
-purpose.
+`episode_description_parser.rb` (ported in commit `0c41aa38`): `spec/episode_description_parser_spec.rb`
+runs all 13 of upstream's own `#[test] fn`s from `episode_description_parser.rs`'s
+`mod tests`, one `it` per upstream fn, each asserting the exact fixture string
+upstream's own test asserts, including two intentional oddities of upstream's
+output that a comment at the top of the file explains are kept on purpose.
+13 examples, 0 failures, verified in this round
+(`.reports/accountability-ensurance.md` Finding 1 — the previous version of
+this sentence made the same claim with no spec file backing it; that is now
+corrected by the spec file existing, not by the wording).
 
 `episode_widget.ui` — `PdEpisode(GtkListBoxRow)`: `Gtk.Revealer`
 (`main_revealer`); drag/drop target revealers with `AdwBin`s carrying CSS
@@ -428,10 +433,37 @@ Relative-time strings in `utils.rs` that the port must reproduce (plural forms):
 
 ## Blockers
 
-1. **No GStreamer binding in the dev shell.** `require "gst"` raises
-   `LoadError`, so `src/player.rs`, `player_mpris.rs` and every play/pause/seek
-   path have no engine. The player widgets can be built and wired to a stub, but
-   audio parity is blocked until the flake provides a `gst` gem. This also holds
+1. **`GstPlay::Play.new` crashes the process; this is not the same blocker as
+   before, and it has not expired.** `require "gstreamer_play"` succeeds (this
+   was Blocker 1's old text, and that text is retired — see
+   `.reports/accountability-ensurance.md` Finding 2 for why the old wording was
+   already stale even before this round). What actually blocks the player, found
+   by running it live in this round's dev shell:
+
+   ```
+   $ nix develop --command xvfb-run -a ruby -e 'require "gstreamer_play"; GstPlay::Play.new'
+   GLib-GObject-CRITICAL **: g_object_get: assertion 'G_IS_OBJECT (object)' failed
+   [BUG] Segmentation fault at 0x0000000000000030
+   ...
+   libgstplay-1.0.so.0(gst_play_main) -> g_thread_proxy -> start_thread
+   ```
+
+   reproduced 3/3 runs, deterministic, with no uri set and no config touched —
+   `GstPlay::Play.new` alone is enough. The backtrace shows why: GstPlay builds
+   `playbin3` on its own GLib thread (`gst_play_main`, spawned via
+   `g_thread_proxy`), gst-plugins-base 1.28.7 logs a `GLib-GObject-CRITICAL`
+   during `playbin3`'s internal `decodebin3` construction on that thread, and
+   ruby-gnome's `glib2` gem installs a log handler that calls back into the
+   Ruby VM (`rbglib_log_handler` → `rb_funcallv`) for every `g_log` message
+   regardless of domain or level. That callback is unsafe from a thread the
+   Ruby VM never registered, and it segfaults every time, before any Ruby
+   code in this port runs. `GLib::Log.set_handler` on the offending domain
+   does not help — the crash is in reaching the trampoline at all, not in
+   what any Ruby block would do with the message. No workaround was found
+   that keeps `GstPlay::Play` usable from this process; see `gems_unusable`
+   in this round's result for the exact repro. This blocks `src/player.rs`,
+   `player_mpris.rs` and every play/pause/seek path, same as the old Blocker
+   1 claimed, but for a different and still-open reason. This also holds
    back `main_window.rb`'s `AdwMultiLayoutView` / `AdwBottomSheet` half, which
    exists only to host the player, and the Player section of
    `shortcuts_dialog.rb`.

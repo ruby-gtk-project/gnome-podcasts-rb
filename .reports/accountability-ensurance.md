@@ -101,6 +101,20 @@ test fixtures assert, including the two named "intentional oddities." Until
 that file exists, the sentence above should be corrected to state plainly
 that the claim is unverified.
 
+**Update, this round:** `spec/episode_description_parser_spec.rb` now exists,
+with all 13 `it` blocks named after upstream's 13 `#[test] fn`s, each
+carrying upstream's own `description`/`expected` fixture strings verbatim.
+Run live:
+
+```
+$ nix develop --command xvfb-run -a ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["--format", "documentation", "--require", "spec_helper", "spec/episode_description_parser_spec.rb"])'
+13 examples, 0 failures
+```
+
+The claim in `component-inventory.md:226` is corrected to point at this file
+instead of asserting the number with nothing behind it. Finding 1 is closed
+by the spec existing and passing, not by softer wording.
+
 ## Finding 2 — two of five stated blockers for the single biggest gap have silently expired
 
 `.reports/component-inventory.md`'s "Blockers" section (written at commit
@@ -147,6 +161,24 @@ section against the current tree (this audit's
 more importantly — **actually build the player** now that its stated
 blocker is gone. The gap is the same size it was before `5f864ce2` landed;
 only the excuse for it has quietly disappeared.
+
+**Update, this round:** the Blockers section has been regenerated against
+the current tree, and the attempt to actually build the player surfaced
+that "the stated reason the player cannot be built is no longer true" was
+only half right. `require "gstreamer_play"` does succeed, as this finding
+says — but `GstPlay::Play.new`, the one call every player design needs
+first, crashes the Ruby process with a deterministic SIGSEGV (3/3 runs),
+before any uri or config is touched. The root cause: GstPlay builds
+`playbin3` on its own GLib thread, gst-plugins-base 1.28.7 logs a
+`GLib-GObject-CRITICAL` during that construction, and ruby-gnome's `glib2`
+gem's global log handler tries to call back into the Ruby VM from that
+thread, which the VM never registered and which segfaults unconditionally.
+No handler-level workaround avoided it. `component-inventory.md`'s Blockers
+section now states this as the current, still-open reason instead of
+repeating the resolved-sounding old one. The player stack was not built
+this round because of this, not because of the old GStreamer-availability
+reason, which really is gone. See this round's result `notes` /
+`gems_unusable` for the exact repro.
 
 ## Finding 3 — the player's absence is recorded as a forward plan, not a debt
 
