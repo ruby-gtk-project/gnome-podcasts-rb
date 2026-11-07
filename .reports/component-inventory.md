@@ -12,11 +12,19 @@ one `lib/*.rb`, so the rows below are unioned per port file.
 
 ## State of the port
 
-`lib/` on `ruby` now holds 49 files (45 at the last inventory, plus 4 net new —
-`http.rb`, `discovery.rb`, `discovery_page.rb`, `discovery_search_results.rb`,
-`discovery_found_podcast.rb` and `episode_description_parser.rb` arrived in
-commit `0c41aa38`, folding `download_covers.rb` and `thumbnail_generator.rb`
-into the "present" column and no longer blocking cover art).
+`lib/` on `ruby` now holds 54 files. The last version of this inventory
+(committed in `befd2791`/`4baf0f22`) undercounted it as 49 and still listed
+`chapter_parser.rb` and `episode_description.rb` as missing — both were
+actually ported two commits earlier, in `6909fa52` ("Port the chapter parser
+and the episode description page"), before the inventory was last written.
+Both are real, substantive ports (228 and 389 lines respectively, each
+carrying its "Ported from" comment and matching upstream's structure), not
+stubs, and both are wired in (`lib/episode_description.rb` is `require_relative`d
+from `episode_widget.rb`/`episode_menu.rb` call sites and has its own
+`test/drive_episode_description.rb`). This round corrects that staleness
+rather than repeating it. Besides those two files, nothing else has moved
+since the last inventory — the file list below and the "still missing" list
+match what commit `0c41aa38` left in place.
 
 Present (one `lib/*.rb` per upstream component, every file carrying the
 `Ported from podcasts-…` comment the house style asks for):
@@ -27,13 +35,13 @@ Present (one `lib/*.rb` per upstream component, every file carrying the
   `home_episode_list.rb`, `shows_view.rb`, `queue_view.rb`, `show_widget.rb`,
   `show_menu.rb`, `filter_menu.rb`
 - **Episodes** — `episode_widget.rb`, `episode_menu.rb`, `download_progress.rb`,
-  `read_more_label.rb`, `episode_description_parser.rb`
+  `read_more_label.rb`, `episode_description_parser.rb`, `episode_description.rb`
 - **Discovery** — `discovery.rb` (data layer: iTunes + fyyd search),
   `discovery_page.rb`, `discovery_search_results.rb`, `discovery_found_podcast.rb`
 - **Empty states** — `empty_view.rb`, `empty_show.rb`
 - **Support** — `settings.rb`, `style.rb`, `icons.rb`, `opml_dialogs.rb`,
   `download_manager.rb`, `download_covers.rb`, `thumbnail_generator.rb`,
-  `http.rb`, `utils.rb`, `xdg_dirs.rb`
+  `http.rb`, `utils.rb`, `xdg_dirs.rb`, `chapter_parser.rb`
 - **Data layer** — `database.rb`, `dbqueries.rb`, `show.rb`, `episode.rb`,
   `source.rb`, `queue_item.rb`, `feed.rb`, `feed_manager.rb`, `opml.rb`,
   `parser.rb`, `pipeline.rb`, `xml_parser.rb`, `data_utils.rb`, `errors.rb`
@@ -59,10 +67,11 @@ Three of the present files are still **partial**, unchanged by commit
 Still entirely missing (every row below marked `no`): the **player** stack
 (10 files: `player_wrapper`, `player_big`, `player_small`, `player_rate`,
 `sheet_base`, `sheet_player`, `sheet_description`, `chapters`, `player`,
-`player_mpris`), the **episode description** page (`episode_description.rb`,
-distinct from `episode_description_parser.rb`, which is now ported), the
-chapter parsers (`chapter_parser.rb`), **sync preferences** and the whole
-Nextcloud sync data layer, and the `po/` catalogue.
+`player_mpris` — all blocked on the GstPlay segfault below), **sync
+preferences** and the whole Nextcloud sync data layer, and the `po/`
+catalogue. `episode_description.rb` and `chapter_parser.rb` were already
+ported as of commit `6909fa52`; the previous version of this inventory had
+them wrong and that is corrected above, not repeated here.
 
 ## Environment facts verified in the fork's dev shell
 
@@ -217,11 +226,11 @@ Not Downloaded.
 |---|---|---|---|
 | `src/widgets/episode.rs` + `episode_widget.ui` | `lib/episode_widget.rb` | row | yes |
 | `src/widgets/episode_menu.rs` + `episode_menu.ui` | `lib/episode_menu.rb` | menu + action group | yes |
-| `src/widgets/episode_description.rs` + `episode_description.ui` | `lib/episode_description.rb` | page | no |
+| `src/widgets/episode_description.rs` + `episode_description.ui` | `lib/episode_description.rb` | page | yes — partial (the "jump:seconds" description link and the Playing button state need the player) |
 | `src/widgets/download_progress_bar.rs` | `lib/download_progress.rb` | widget | yes |
 | `src/widgets/read_more_label.rs` | `lib/read_more_label.rb` | widget | yes |
 | `src/episode_description_parser.rs` | `lib/episode_description_parser.rb` | helper (HTML → Pango) | yes |
-| `src/chapter_parser/{mod,id3,extended_comment}.rs` | `lib/chapter_parser.rb` | helper | no |
+| `src/chapter_parser/{mod,id3,extended_comment}.rs` | `lib/chapter_parser.rb` | helper | yes |
 
 `episode_description_parser.rb` (ported in commit `0c41aa38`): `spec/episode_description_parser_spec.rb`
 runs all 13 of upstream's own `#[test] fn`s from `episode_description_parser.rs`'s
@@ -494,9 +503,9 @@ Relative-time strings in `utils.rs` that the port must reproduce (plural forms):
 7. **`secondary_menu.ui` is dead upstream** — its three items have their
    `action` attributes commented out. `lib/show_menu.rb` records this and does
    not port it; do not invent actions for it.
-8. **No `.ui` files by house rule.** The remaining 10 unported GtkBuilder trees
-   (the 8 player/sheet/chapters ones, plus `episode_description.ui` and
-   `sync_preferences.ui`) must be transcribed into memoized Ruby builders by
-   hand. The Adwaita types are all present (verified above), so this is volume,
-   not capability. (The 3 discovery `.ui` trees that were on this list at the
-   last inventory are now ported.)
+8. **No `.ui` files by house rule.** The remaining 9 unported GtkBuilder trees
+   (the 8 player/sheet/chapters ones, plus `sync_preferences.ui`) must be
+   transcribed into memoized Ruby builders by hand. The Adwaita types are all
+   present (verified above), so this is volume, not capability. (The 3
+   discovery `.ui` trees and `episode_description.ui` that were on this list
+   at the last inventory are now ported.)
