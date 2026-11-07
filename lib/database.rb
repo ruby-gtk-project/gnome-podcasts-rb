@@ -17,17 +17,25 @@ require "fileutils"
 # integer primary key gets one here too, so the ids in the UI's action targets
 # mean the same thing they do upstream.
 class Database
-  TABLES = %w[source shows episodes queue discovery_settings].freeze
+  TABLES = %w[source shows episodes queue discovery_settings episodes_sync shows_sync settings_sync].freeze
 
   # Upstream's unique indexes, from migrations/*/up.sql. A write that would
   # duplicate one of these tuples replaces the existing row, which is what
   # diesel's `INSERT OR REPLACE`-shaped index/update pairs do.
+  #
+  # episodes_sync, shows_sync and settings_sync are the delta-tracking tables
+  # podcasts-data/src/models/sync/{episode,show,settings}.rs upsert into, with
+  # the same primary keys: (ep_id, action), uri, and server (settings_sync
+  # holds a single row, same as upstream keeps a single row in it).
   UNIQUE_KEYS = {
     "source"             => [%w[uri]],
     "shows"              => [%w[source_id]],
     "episodes"           => [%w[show_id guid], %w[show_id title]],
     "queue"              => [%w[episode_id], %w[position]],
     "discovery_settings" => [%w[platform_id]],
+    "episodes_sync"      => [%w[ep_id action]],
+    "shows_sync"         => [%w[uri]],
+    "settings_sync"      => [%w[server]],
   }.freeze
 
   class << self
