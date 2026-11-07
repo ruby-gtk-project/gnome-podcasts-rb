@@ -51,7 +51,20 @@ GtkDriver.drive(APP, shots: "tmp/shots") do |d, app|
   d.step("the window opens on the Home page") do
     d.check("the fixture indexed 43 episodes") { EPISODES.length == 43 }
     d.check("the window is mapped") { app.window.mapped? }
-    d.check("the window has a size") { app.window.width.positive? && app.window.height.positive? }
+    d.check("the window has a size") do
+      # The first size-allocate under Xvfb sometimes lands a beat after this
+      # step's own tick, especially under host load — pump the main context a
+      # little further rather than widen the whole driver's interval or weaken
+      # this into a non-check.
+      context = GLib::MainContext.default
+      50.times do
+        break if app.window.width.positive? && app.window.height.positive?
+
+        context.iteration(false)
+        sleep(0.01)
+      end
+      app.window.width.positive? && app.window.height.positive?
+    end
     d.check("home is the visible page") { app.main_window.content.stack.visible_child_name == "home" }
     d.check("the first episode has a row") do
       !app.main_window.content.home_view.episode_list.episode_widget(EPISODES.first.id).nil?
@@ -79,6 +92,28 @@ GtkDriver.drive(APP, shots: "tmp/shots") do |d, app|
     end
     d.check("the empty page is down") { !app.main_window.content.queue_view.empty_status_page.visible? }
     d.shot("04-queue-filled")
+  end
+
+  d.step("a second episode is queued, then moved up through its row menu") do
+    app.add_to_queue(EPISODES[1].id)
+    d.check("the queue has two rows") { Dbqueries.queue.length == 2 }
+    d.check("the new episode sorted to the bottom") { !Dbqueries.first_position_in_queue?(EPISODES[1].id) }
+
+    EpisodeMenu.new(app: app, episode: Dbqueries.episode_from_id(EPISODES[1].id), queue_view: true)
+      .build.group.activate_action("move-up-in-queue", nil)
+    d.check("the move-up action put it first") { Dbqueries.first_position_in_queue?(EPISODES[1].id) }
+  end
+
+  d.step("and moved back down, then removed, through the same menu") do
+    EpisodeMenu.new(app: app, episode: Dbqueries.episode_from_id(EPISODES[1].id), queue_view: true)
+      .build.group.activate_action("move-down-in-queue", nil)
+    d.check("the move-down action put it last again") { !Dbqueries.first_position_in_queue?(EPISODES[1].id) }
+
+    app.remove_from_queue(EPISODES[1].id)
+    d.check("the queue is back to one row") { Dbqueries.queue.length == 1 }
+    d.check("the removed row left the page") do
+      app.main_window.content.queue_view.episode_widget(EPISODES[1].id).nil?
+    end
   end
 
   d.step("the show page opens") do
@@ -117,6 +152,28 @@ GtkDriver.drive(APP, shots: "tmp/shots") do |d, app|
       app.main_window.show_widget.instance_variable_get(:@rows).length == 1
     end
     d.shot("07-filtered")
+  end
+
+  d.step("the show menu's mark-all-played toast defers the write until it closes") do
+    app.main_window.instance_variable_set(:@__captured_toasts, [])
+    app.main_window.define_singleton_method(:add_toast) do |toast|
+      @__captured_toasts << toast
+      toast_overlay.add_toast(toast)
+    end
+
+    d.check("the target episode starts unplayed") { !Dbqueries.episode_from_id(EPISODES[2].id).played? }
+
+    ShowMenu.new(app: app, show: SHOW, widget: app.main_window.show_widget).build
+      .group.activate_action("mark-played", nil)
+
+    toast = app.main_window.instance_variable_get(:@__captured_toasts).last
+    d.check("the menu action raised a toast") { !toast.nil? }
+    d.check("the database write waits for the toast to close") do
+      !Dbqueries.episode_from_id(EPISODES[2].id).played?
+    end
+
+    toast.dismiss
+    d.check("dismissing without Undo commits the mark") { Dbqueries.episode_from_id(EPISODES[2].id).played? }
   end
 
   d.step("the search bar opens on the show page") do
