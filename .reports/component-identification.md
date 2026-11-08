@@ -2,9 +2,24 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` (GNOME Podcasts, Rust + gtk-rs) |
-| Port | `ruby` branch, HEAD `4b0942a4` |
-| Method | `.reports/component-inventory.md` (existing, written across commits `61d1f845`/`b8891af1`/`a49a24b2`) re-walked and corrected against the **current** `lib/` tree and `origin/main`'s file list, rather than re-run from `gir-symbols.sh`/`component-scan.sh` from scratch |
+| Upstream | `origin/main` @ `35d671f6` (GNOME Podcasts, Rust + gtk-rs; unchanged since the prior audit pass) |
+| Port | `ruby` branch, HEAD `c1050e6e` (re-run this pass; the prior pass at `4b0942a4` is superseded below) |
+| Method | this report (prior pass, written against `4b0942a4`) re-walked against the **current** `lib/` tree and `origin/main`'s file list |
+
+**Delta since the prior pass (`4b0942a4` → `c1050e6e`):** one new commit,
+`c1050e6e` "Port the Nextcloud sync delta-tracking models", adds
+`lib/models/sync.rb` (240 lines: `Sync::Episode`, `Sync::Show`,
+`Sync::Settings`, `Sync.delete_deltas`). This is the **data model** half of
+upstream's `podcasts-data/src/models/sync/{mod,episode,settings,show}.rs`
+only. It does not touch, and does not reduce, any row in the "still entirely
+absent" table below — the network/protocol half
+(`podcasts-data/src/nextcloud_sync/*`, 5 files) and the whole UI half
+(`sync_preferences.rs`/`.ui`, the menu item, the player subsystem) remain
+exactly as absent as the prior pass found them. The keyring-backed password
+storage inside upstream's `Settings` (`store`/`fetch`/`remove`, reading the
+Secret Service over D-Bus) is explicitly left out of the port and documented
+as such in `lib/models/sync.rb`'s header comment — an honest scope cut, not a
+hidden one, and noted as such in `.reports/accountability-ensurance.md`.
 
 The repo already carries a thorough, per-file component inventory at
 `.reports/component-inventory.md`. It is honest in tone (it states blockers
@@ -45,9 +60,8 @@ gap itself has not been revisited. See `.reports/accountability-ensurance.md`.
 
 ## Current count
 
-`lib/*.rb`: **51** files (the inventory's own count of 49 is two files low —
-`chapter_parser.rb` and `episode_description.rb` are the two files that
-`a49a24b2` recorded as absent and that have since landed).
+`lib/*.rb`: **52** files (51 at the prior pass, plus `lib/models/sync.rb`
+landed in `c1050e6e`).
 
 ## What is present vs. absent, re-verified against `origin/main`'s file list
 
@@ -60,6 +74,7 @@ Everything the inventory's "Present" section lists, **plus**:
 - `lib/chapter_parser.rb` — ported from `podcasts-gtk/src/chapter_parser/{mod,id3,extended_comment}.rs`. Loads `Gst`/`GstPbutils` GI namespaces directly since neither `gstreamer_play` nor any other fork gem exposes them.
 - `lib/episode_description.rb` — ported from `src/widgets/episode_description.rs` + `episode_description.ui`.
 - `Gtk::DragSource`/`Gtk::DropTarget` wiring in `lib/episode_widget.rb` for queue reordering.
+- `lib/models/sync.rb` (new this pass) — ported from `podcasts-data/src/models/sync/{mod,episode,settings,show}.rs`. Data model only: three new JSON-store tables with upstream's upsert-on-conflict keys and the stale-Play-action ignore rule. No network sync, no UI, no keyring (documented cut).
 
 ### Still entirely absent — re-verified by `grep -ril "player|mpris|sheet_player|sync_pref" lib/ exe/`, which returns **zero** files other than files that match the word "player" only inside prose comments explaining the gap
 
@@ -76,8 +91,8 @@ Everything the inventory's "Present" section lists, **plus**:
 | `src/widgets/sheet_description.rs` + `.ui` | `lib/sheet_description.rb` | **no** |
 | `src/widgets/chapters.rs` + `.ui` (the chapters *list page*; distinct from the chapter *parser*, which is ported) | `lib/chapters.rb` | **no** |
 | `src/widgets/sync_preferences.rs` + `.ui` | `lib/sync_preferences.rb` | **no** |
-| `src/nextcloud_sync/{mod,data,download,login,upload}.rs` | (data layer for the above) | **no** |
-| `src/models/sync/{mod,episode,show,settings}.rs` | (data layer for the above) | **no** |
+| `src/nextcloud_sync/{mod,data,download,login,upload}.rs` (the Nextcloud HTTP protocol: login, upload/download deltas) | none | **no** — unchanged this pass |
+| `src/models/sync/{mod,episode,show,settings}.rs` | `lib/models/sync.rb` | **yes, new this pass** — data model only; see delta note above |
 | `podcasts-gtk/po/*.po` (45 locales) + `POTFILES.in` | `po/` + gettext wiring | **no** — see `.reports/translation-parity.md` |
 | `podcasts-gtk/resources/org.gnome.Podcasts.gschema.xml.in` UI surface, `.desktop.in.in`, `.metainfo.xml.in.in` | none in the port | **no** — only the 8 keys with no upstream UI are read (`lib/settings.rb`); the app has no `.desktop`/metainfo/schema files of its own |
 
@@ -97,10 +112,14 @@ itself was built with one fewer row than upstream's, silently.
 
 - **MPRIS / `Gio::DBus` desktop integration** (`player_mpris.rs`): no
   established pattern in the pilot port (`gnome-contacts-rb`), still true.
-- **Nextcloud sync** (`src/nextcloud_sync/`, `src/models/sync/`): whole data
-  layer absent, still true, and it is upstream of `sync_preferences.rb`, so
-  that page cannot be meaningfully built before it regardless of GStreamer
-  availability.
+- **Nextcloud sync** (`src/nextcloud_sync/`): the HTTP protocol layer
+  (login, upload/download of deltas — 5 files, 22 upstream tests, see
+  `.reports/test-parity.md`) is still absent. The **data model** half
+  (`src/models/sync/`) landed this pass as `lib/models/sync.rb`, so this
+  blocker has narrowed — but `sync_preferences.rb` still cannot be
+  meaningfully built without the protocol layer it displays the state of,
+  and the menu item it would hang off (`win.goto-sync-preferences`) is
+  still not installed.
 
 ## Scope note
 

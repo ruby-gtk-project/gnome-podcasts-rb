@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| Upstream | `main` @ `origin/main` |
-| Port | `ruby` @ `4b0942a4` |
+| Upstream | `main` @ `origin/main` (`35d671f6`, unchanged since the prior pass) |
+| Port | `ruby` @ `c1050e6e` (re-run this pass; prior pass was `4b0942a4`) |
 | Units with full (4-axis) parity, of units attempted | see per-unit table below |
 | Units upstream ships that the port has not started | **12** (player ×10, sync preferences, chapters page) |
 
-Runtime gate for this round: `drive_ok=true`, 97/97 checks across
+Runtime gate for this round (re-run live in this pass, `c1050e6e`): `drive_ok=true`, 97/97 checks across
 `test/drive_covers.rb` (19), `test/drive_discovery.rb` (38),
 `test/drive_episode_description.rb` (3) and `test/drive_main_window.rb` (37),
 re-run in this audit and confirmed green. **That gate exercises 4 of the ~20
@@ -73,9 +73,15 @@ playback.
 
 ### Sync preferences — `sync_preferences.rs`+`.ui` → `lib/sync_preferences.rb`
 
-Entire page absent, plus its whole data layer (`src/nextcloud_sync/*`,
-`src/models/sync/*`) absent. Zero widgets, zero of the two `Adw.ToggleGroup`
-login modes, zero of the 5 loading-state strings.
+Entire page still absent — **no widget axis changes this pass.** The data
+model half of what it would display (`src/models/sync/*`) landed this pass
+as `lib/models/sync.rb` (see `.reports/component-identification.md`), but
+the page itself, its network layer (`src/nextcloud_sync/*`, still 0 of 5
+files), the two `Adw.ToggleGroup` login modes and all 5 loading-state
+strings remain exactly as absent as the prior pass. A data model with no
+UI and no protocol layer in front of it is not a step toward this unit
+having parity on any of the four axes — it is invisible to a user running
+the app, which is the comparison this report makes.
 
 ### Units with full 4-axis parity on spot check
 

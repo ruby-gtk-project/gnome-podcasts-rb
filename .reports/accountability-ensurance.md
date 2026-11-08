@@ -20,12 +20,15 @@ anyone could grep for and fix. It is structural.
 
 ## Excuse-pattern scan (`find-excuses.sh`)
 
+Re-run this pass (`c1050e6e`, one commit after the prior pass's `4b0942a4`):
+
 ```
 .reports/component-inventory.md:162  "deliberately skipped" / "n/a" / "not ported" / "skipped"
 .reports/component-inventory.md:443   "unported"
 .reports/component-inventory.md:465   "unported"
 lib/show_menu.rb:15                   "not ported"
 lib/source.rb:77                      "not required here"
+lib/models/sync.rb:163                "not ported"  — NEW this pass, lands with lib/models/sync.rb
 ```
 
 Each one read in context, individually:
@@ -56,7 +59,26 @@ Each one read in context, individually:
    than a debt. Not escalated further because they do not launder the gap —
    the gap is listed, with files, elsewhere in the same document, repeatedly.
 
-None of these five scan hits is the real problem. **Three other things in
+4. **`lib/models/sync.rb:163` — "See the module comment above for what is
+   not ported here" (new this pass).** The module comment it points to
+   (`lib/models/sync.rb:17-25`) names the specific omission plainly:
+   upstream's `Settings::store`/`::fetch`/`::remove` read and write the
+   sync password through the desktop keyring (`oo7::Keyring`, Secret
+   Service over D-Bus); this port has no secret-storage gem in its
+   dependency list (confirmed: `grep -i "keyring\|secret" *.gemspec` and
+   `gem list` in the dev shell both return nothing), and declines to
+   hand-roll a raw `Gio::DBusProxy` Secret Service client as a workaround.
+   This names the behaviour (password storage) and the reason (no gem),
+   which is most of what the skill asks for — it falls short only in
+   register, reading as a calm scope note rather than a first-person debt.
+   **Minor finding, same bucket as #3**: low stakes right now because the
+   page that would call these methods (`sync_preferences.rb`) does not
+   exist yet and is already tracked as a full gap elsewhere in this round's
+   reports — but the phrasing should still be rewritten before
+   `sync_preferences.rb` is built, so the keyring omission does not quietly
+   outlive the reason it is currently true for.
+
+None of these six scan hits is the real problem. **Three other things in
 the repository are**, and none of them was caught by the keyword list,
 because they are not phrased as excuses — they are phrased as settled plans
 and settled facts, which is the more dangerous version of the same failure.
@@ -245,3 +267,13 @@ podcast player (Finding 3). The keyword/excuse scans themselves came back
 almost clean — which is precisely why Findings 1–3 matter more than a longer
 list of "for now"s would have: the dangerous material here reads as
 competent, calm, and done.
+
+**This pass (`c1050e6e`):** one new commit since the prior pass, adding
+`lib/models/sync.rb`. It introduces one new minor scan hit (#4 above, the
+keyring omission), correctly explained rather than laundered, and does not
+touch or resolve Findings 1–3 — the player is still absent, the GstPlay
+segfault blocker from Finding 2 was not re-tested this pass and is assumed
+unchanged, and `lib/main_window.rb`/`lib/episode_widget.rb`/
+`lib/shortcuts_dialog.rb` still carry the same "arrives with lib/player.rb"
+forward-reference language Finding 3 names. The new commit is honestly
+scoped and does not change the verdict.

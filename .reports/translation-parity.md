@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Upstream | `main` @ `35d671f6` |
-| Port | `ruby` @ `4b0942a4` |
+| Upstream | `main` @ `35d671f6` (unchanged since the prior pass) |
+| Port | `ruby` @ `c1050e6e` (re-run this pass; prior pass was `4b0942a4`) |
 | Domain | `gnome-podcasts` (upstream's `.mo`/project name — not independently reconfirmed via `meson.build` in this pass; see Open) |
 | Upstream messages | **178** distinct `msgid`s (counted from `podcasts-gtk/po/fr.po`, `grep -c '^msgid "'`; one of these is the empty header entry, so **177** real messages) |
 | Ported | **0** |

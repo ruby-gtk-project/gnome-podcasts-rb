@@ -2,13 +2,13 @@
 
 | | |
 |---|---|
-| Upstream | `main` @ `35d671f6` (worktree pinned for this audit; record this sha) |
-| Port | `ruby` @ `598982e3` (re-run this pass; the prior pass at `4b0942a4` is superseded below) |
-| Upstream tests (census) | **123** (`scripts/test-census.sh`, cross-checked by hand against `#[test]` occurrences per file: 121 by hand-count, 123 by script — the 2-test discrepancy is `podcasts-gtk/src/utils.rs`, 7 by script vs 3 counted by eye; not resolved in this pass, see "Open" below) |
-| Ported (named, bijective) | **13** confirmed by name (`spec/episode_description_parser_spec.rb`, added in `4baf0f22` after the prior pass of this report; see below). The other 110 remain **0** by name. |
+| Upstream | `main` @ `35d671f6` (worktree pinned for this audit; unchanged since the prior pass) |
+| Port | `ruby` @ `c1050e6e` (re-run this pass; the prior pass at `598982e3` is superseded below) |
+| Upstream tests (census) | **123** (`scripts/test-census.sh`, cross-checked by hand against `#[test]` occurrences per file: 121 by hand-count, 123 by script — the 2-test discrepancy is `podcasts-gtk/src/utils.rs`, 7 by script vs 3 counted by eye; still not resolved in this pass, see "Open" below) |
+| Ported (named, bijective) | **13** confirmed by name (`spec/episode_description_parser_spec.rb`, unchanged this pass). The other 110 remain **0** by name — see the new `sync_spec.rb` row below for why the +6 examples this pass do not add to this count. |
 | Gaps | up to 110, pending the row-by-row census this report does not complete |
 | Suite actually run | **yes** — both commands below were executed in this audit, not assumed |
-| Test command | `nix develop --command xvfb-run -a ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["--format", "progress", "--require", "spec_helper", "spec"])'` → `33 examples, 0 failures` |
+| Test command | `nix develop --command xvfb-run -a ruby -e 'require "rspec/core"; exit RSpec::Core::Runner.run(["--format", "progress", "--require", "spec_helper", "spec"])'` → `39 examples, 0 failures` |
 | Drive command | `nix develop --command xvfb-run -a ruby test/drive_*.rb` → `19+38+3+37 = 97 of 97 checks passed`, `DRIVE OK` on all four |
 
 ## What was actually run in this audit, and the result
@@ -16,12 +16,28 @@
 Both commands above were executed live, not inferred from a prior claim:
 
 ```
-33 examples, 0 failures
+39 examples, 0 failures
 ```
 
-(Rerun of this report's own prior pass, which recorded `20 examples, 0
-failures` at `4b0942a4`. The +13 is `spec/episode_description_parser_spec.rb`,
-added in `4baf0f22`, between that pass and this one — see "Update" below.)
+(Rerun of this report's own prior pass, which recorded `33 examples, 0
+failures` at `598982e3`. The +6 is `spec/sync_spec.rb`, added in `c1050e6e`
+alongside `lib/models/sync.rb`, between that pass and this one.)
+
+### `spec/sync_spec.rb` (new this pass) — plausible, not bijective
+
+Upstream's `podcasts-data/src/models/sync/{mod,episode,settings,show}.rs`
+carry 4 `#[test]`s total, one per file, three of them identically named
+`test_episode_deltas` (upstream itself reuses the name across
+`episode.rs`/`settings.rs`/`show.rs` — not this port's naming choice) plus
+`mod.rs`'s `test_delete_deltas`. The port's 6 `it` blocks cover this ground
+by behaviour — upsert-by-`(ep_id, action)`, upsert-by-`uri`, `set_active`,
+`store_multiple_subscriptions`, and the delta-clearing cutoff — but none is
+named after or isolated to match a specific upstream `#[test]` 1:1, the same
+shape as `opml_spec`'s pre-existing non-bijective pass below. **These 6 do
+not move the "13 confirmed by name" figure.** They do shrink the Nextcloud
+total from "23, 0 ported" to a corrected "26 total (4 models + 22
+protocol), 4 of 4 model tests have a plausible counterpart, 22 of 22
+protocol tests remain at 0" — see the corrected Nextcloud row below.
 
 ```
 === test/drive_covers.rb ===    19 of 19 checks passed   DRIVE OK
@@ -52,7 +68,8 @@ specific upstream `#[test]`. Census of upstream:
 | `podcasts-data/src/models/show.rs` | 7 | 0 named |
 | `podcasts-gtk/src/utils.rs` | 3–7 (script says 7, hand count says 3; unresolved) | 0 named |
 | `podcasts-data/src/discovery/{itunes,fyyd,search}.rs` | 10 | **0** — `discovery.rb` has no spec file at all; only exercised indirectly by `test/drive_discovery.rb`'s thumbnail-scaling and cover-placement checks, which test the port's own thumbnail logic, not iTunes/fyyd query building or response parsing |
-| `podcasts-data/src/nextcloud_sync/*` + `models/sync/*` | 23 | **0**, and cannot be ported until the component exists (see component reports) — these 23 are a permanent gap, not a deferred one, until `sync_preferences.rb`/the Nextcloud data layer is built |
+| `podcasts-data/src/models/sync/{mod,episode,settings,show}.rs` | 4 | partially — `spec/sync_spec.rb` (new this pass, 6 `it`s) plausibly covers all 4 by behaviour, none named 1:1; see note above |
+| `podcasts-data/src/nextcloud_sync/{mod,data,download,login,upload}.rs` (the HTTP protocol layer) | 22 (corrected count: 5+5+3+4+5; the prior pass's "23" for this whole area was off by one, and bundled the now-separated models row above) | **0**, and cannot be ported until the component exists (see component reports) — still a permanent gap, not a deferred one, until the network layer and `sync_preferences.rb` are built |
 | `podcasts-data/src/dbqueries.rs` | 3 | partially — `Dbqueries` has 5 `it` blocks covering filtering, queueing and removal; no 1:1 naming |
 | `podcasts-data/src/opml.rs` | 2 | 2 `it` blocks exist (`reads the feed urls...`, `round-trips the subscriptions...`) and plausibly cover the same two upstream cases by behaviour, but are not named to make the mapping checkable without re-reading both sides |
 | `podcasts-gtk/src/chapter_parser/{id3,extended_comment}.rs` | 2 | 3 `it` blocks in `spec/chapter_parser_spec.rb` cover this ground most faithfully of anything in the port — closest the suite gets to a real mapping, still not named 1:1 |
@@ -60,37 +77,40 @@ specific upstream `#[test]`. Census of upstream:
 | `podcasts-data/src/{database,pipeline,parser}.rs` | 3 | 1–2 `it` blocks touch adjacent ground, not named |
 
 **Total named/mapped-by-construction: 13 of 123** (episode_description_parser,
-confirmed above). The port runs 33 rspec examples and 97 driven UI checks,
-all green — but apart from those 13, none of the remaining ~104 test units
-was written *as* the upstream test it corresponds to, with the upstream
-test's name or identifier preserved per the skill's naming convention
-(`test_add_minimal` ↔ `/cli/argument_parser/add_minimal`). The rest of the
-port's suite is real, substantial, and passing — and it is **extra**, in the
-skill's terms, not **ported**.
+confirmed above; unchanged this pass — `sync_spec.rb`'s 6 new examples are
+plausible, not named, per the note above). The port runs 39 rspec examples
+and 97 driven UI checks, all green — but apart from those 13, none of the
+remaining ~110 test units was written *as* the upstream test it corresponds
+to, with the upstream test's name or identifier preserved per the skill's
+naming convention (`test_add_minimal` ↔ `/cli/argument_parser/add_minimal`).
+The rest of the port's suite is real, substantial, and passing — and it is
+**extra**, in the skill's terms, not **ported**.
 
 ## This report is itself incomplete, stated plainly
 
 A full row-by-row ledger (123 rows, one upstream test per row, Purpose +
 Port test + State) is the deliverable the skill asks for and this audit did
 not build it — the per-case reading of all 123 upstream tests (especially
-the 10 `new_show`/`new_episode` validation cases and the 23 Nextcloud cases)
-was not done to that depth in this pass. That is a **gap in this audit**,
-named as such rather than rounded up to "roughly ported" or left implied.
-The honest number this report can stand behind is:
+the 10 `new_show`/`new_episode` validation cases and the 22 remaining
+Nextcloud protocol cases) was not done to that depth in this pass. That is a
+**gap in this audit**, named as such rather than rounded up to "roughly
+ported" or left implied. The honest number this report can stand behind is:
 
 - **123 upstream tests exist** (census run, reproducible).
 - **13 (episode_description_parser) are confirmed ported 1:1 by name**,
-  verified running (`13 examples, 0 failures` in isolation) in this pass.
-  This was a false-green claim as of the prior pass of this report; it no
-  longer is.
-- **At most ~20 more of the remaining 110 have any plausible port
+  verified running (`13 examples, 0 failures` in isolation). This was a
+  false-green claim two passes ago; it no longer is.
+- **4 more (models/sync) gained a plausible, non-bijective counterpart this
+  pass** (`sync_spec.rb`).
+- **At most ~20 more of the remaining 106 have any plausible port
   counterpart at all**, by subject-matter overlap, and none of those is
   written as a 1:1 named pair — several demonstrably merge multiple
   upstream cases.
-- **23 (nextcloud_sync) cannot be ported at all** until that component exists.
+- **22 (nextcloud_sync protocol layer) cannot be ported at all** until that
+  component exists.
 - The suite that **does** exist is green and was verified running in this
   audit, which is worth stating precisely so it is not conflated with test
-  parity: `33/33 rspec`, `97/97 drive checks`, both reproduced live.
+  parity: `39/39 rspec`, `97/97 drive checks`, both reproduced live.
 
 ## Extra
 
