@@ -135,6 +135,10 @@ GtkDriver.drive(APP, shots: "tmp/shots") do |d, app|
   end
 
   d.step("an empty search shows the no-results line instead") do
+    # Pop the first results page first: a real search-again only ever
+    # happens after the user has navigated back to the discovery page, so
+    # two "search_results"-tagged pages never coexist in the nav stack.
+    app.main_window.navigation_view.pop
     DiscoverySearchResults.new(app: app, results: []).then do |results|
       app.main_window.push_page(results.build)
       d.check("the no-results line is up") { results.no_results_label.visible? }
