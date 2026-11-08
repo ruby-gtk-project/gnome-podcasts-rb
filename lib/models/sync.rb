@@ -14,15 +14,17 @@ require_relative "../errors"
 # primary keys, the same upsert-on-conflict semantics and the same ignore
 # rule for a stale Play action racing a newer one.
 #
-# Upstream's `Settings::store`/`::fetch`/`::remove` also read and write the
-# real password through the desktop keyring (`oo7::Keyring`, Secret
-# Service over D-Bus). This port has no secret-storage gem in its dependency
-# list — none of the bound gems in the gemspec provide it, and hand-rolling a
-# raw `Gio::DBusProxy` Secret Service client is exactly the kind of
-# work-around the gem wiring rules warn against writing on spec. So the
-# password side of `Settings` is left out of this round: `store_entry`,
-# `fetch_entry`, `set_active` and the two timestamp helpers below are the
-# full port of everything that does not touch the keyring.
+# I did not port the keyring half of upstream's `Settings`. Upstream's
+# `Settings::store`/`::fetch`/`::remove` also read and write the real
+# Nextcloud password through the desktop keyring (`oo7::Keyring`, Secret
+# Service over D-Bus). I have no secret-storage gem bound into this app —
+# none of the gems in the gemspec provide it — and hand-rolling a raw
+# `Gio::DBusProxy` Secret Service client would be exactly the kind of
+# work-around the gem wiring rules tell me not to write on spec. So I left
+# the password side of `Settings` out this round: `store_entry`,
+# `fetch_entry`, `set_active` and the two timestamp helpers below are
+# everything I ported that does not touch the keyring, and that omission is
+# still open, not resolved by anything in this file.
 module Sync
   # Ported from sync/episode.rs's Episode.
   #
